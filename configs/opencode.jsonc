@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "references": {
+    "plur": {
+      "path": "~/.plur",
+      "description": "PLUR persistent memory — engrams (facts, rules), episodes, history. Read on session start for user context. Write new knowledge during session."
+    }
+  }
+}
