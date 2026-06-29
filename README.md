@@ -1,5 +1,7 @@
 # Termux opencode Setup
 
+[![Release](https://img.shields.io/github/v/release/antoshik86/termux-opencode-setup)](https://github.com/antoshik86/termux-opencode-setup/releases/latest)
+
 Готовая сборка Termux + opencode + PLUR + инструменты для разработки на Android.
 
 Эта инструкция проведёт тебя шаг за шагом от установки Termux до готовой рабочей среды с ИИ-ассистентом.
@@ -44,7 +46,7 @@ bash setup.sh
 
 ---
 
-## Способ 3: Установка с релиза (без npm)
+## Способ 2: Установка с релиза (без npm, быстрее)
 
 Если не хочешь ждать `npm install` — opencode ставится сразу из готового бинарника:
 
@@ -68,7 +70,7 @@ bash setup.sh
 
 ---
 
-## Способ 2: Ручная установка (подробно)
+## Способ 3: Ручная установка (подробно)
 
 Делай шаг за шагом. Если что-то пошло не так — ищи совет в конце шага.
 
@@ -229,6 +231,20 @@ opencode
 | `opencode: command not found` | Закрой и открой Termux заново. Или выполни: `export PATH="$HOME/.opencode/bin:\$PATH"` |
 | `Cannot read properties of null` | Не установлен glibc. Вернись к Шагу 5. |
 | `Permission denied` | Не дал разрешения. Выполни `termux-setup-storage` и нажми Allow. |
+
+---
+
+## Релизы
+
+Все версии и готовые бинарники — на странице релизов:
+https://github.com/antoshik86/termux-opencode-setup/releases
+
+В каждом релизе:
+| Файл | Описание |
+|---|---|
+| `opencode-v{version}-linux-arm64-glibc.tar.gz` | opencode для Termux с glibc (ARM64) |
+| `opencode-v{version}-linux-arm64-musl.tar.gz` | opencode для Termux с musl (ARM64) |
+| `setup.sh` | Автоустановщик |
 
 ---
 
