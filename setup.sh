@@ -18,9 +18,15 @@ pkg install -y glibc-repo
 pkg update
 pkg install -y glibc glibc-runner
 
-# 4. opencode
+# 4. opencode (пропускаем, если уже установлен из бинарника)
 echo "[4/8] Установка opencode..."
-npm install -g opencode-ai
+if command -v opencode &>/dev/null; then
+  echo "  opencode уже установлен: $(opencode --version)"
+elif [ -f ~/.opencode/bin/opencode ]; then
+  echo "  opencode уже установлен в ~/.opencode"
+else
+  npm install -g opencode-ai
+fi
 
 # 5. PLUR
 echo "[5/8] Установка PLUR..."

@@ -44,6 +44,30 @@ bash setup.sh
 
 ---
 
+## Способ 3: Установка с релиза (без npm)
+
+Если не хочешь ждать `npm install` — opencode ставится сразу из готового бинарника:
+
+```bash
+pkg update && pkg upgrade -y
+pkg install -y git curl glibc-repo glibc glibc-runner
+git clone https://github.com/antoshik86/termux-opencode-setup
+cd termux-opencode-setup
+
+# Скачать и распаковать opencode
+mkdir -p ~/.opencode/bin
+curl -L https://github.com/antoshik86/termux-opencode-setup/releases/latest/download/opencode-v1.17.11-linux-arm64-glibc.tar.gz \
+  | tar xz --strip-components=2 -C ~/.opencode/bin package/bin/
+chmod +x ~/.opencode/bin/opencode
+echo 'export PATH="$HOME/.opencode/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# setup.sh сам заметит, что opencode уже есть, и не будет ставить через npm
+bash setup.sh
+```
+
+---
+
 ## Способ 2: Ручная установка (подробно)
 
 Делай шаг за шагом. Если что-то пошло не так — ищи совет в конце шага.
