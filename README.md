@@ -58,13 +58,14 @@ termux-setup-storage
 ## Способ 1: Быстрая установка (автомат)
 
 **Для Тамилы и всех, кто не хочет разбираться.**
-Просто скопируй эти 4 команды по одной и вставь в Termux (нажми и держи → Paste):
+Просто скопируй этот блок и вставь в Termux (нажми и держи → Paste):
 
 ```bash
 pkg update && pkg upgrade -y
 pkg install -y git
 git clone https://github.com/antoshik86/termux-opencode-setup
 cd termux-opencode-setup && bash setup.sh
+# ↑ скопируется всё сразу. Если последняя строка не запустилась — нажми Enter
 ```
 
 **Что произойдёт:** скрипт сам:
