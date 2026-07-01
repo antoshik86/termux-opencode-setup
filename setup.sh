@@ -102,6 +102,11 @@ header "2. Установка базовых инструментов"
 pkg install -y git curl gh nodejs python make openssh file 2>&1 | tail -1
 ok "Git, curl, Node.js, Python, gh, make, openssh, file установлены"
 
+# Настраиваем git на использование GitHub токена (чтобы не было rate limit)
+if command -v gh &>/dev/null; then
+  gh auth setup-git 2>/dev/null || true
+fi
+
 # --------------------------------------------------
 header "3. Установка glibc (нужна для запуска opencode)"
 
@@ -260,6 +265,8 @@ while IFS= read -r skill; do
         warn "  $skill (не удалось скачать — пропускаю)"
         SKILL_FAIL=$((SKILL_FAIL+1))
       fi
+      # Маленькая пауза между клонированиями — чтобы GitHub не банил
+      sleep 0.5
     fi
   fi
 done < "$SCRIPT_DIR/skills.txt"
