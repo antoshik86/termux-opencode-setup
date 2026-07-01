@@ -62,6 +62,17 @@ echo -e "${NC}"
 MIN_SPACE_MB=500
 ERRORS=0
 
+# Сохраняем весь вывод в лог-файл
+LOG_FILE="$HOME/opencode-install.log"
+echo "=== Termux opencode Setup v$SCRIPT_VERSION ===" > "$LOG_FILE"
+echo "Дата: $(date)" >> "$LOG_FILE"
+echo "Устройство: $(getprop ro.product.model 2>/dev/null || echo '?')" >> "$LOG_FILE"
+echo "Android: $(getprop ro.build.version.release 2>/dev/null || echo '?')" >> "$LOG_FILE"
+echo "Архитектура: $(uname -m 2>/dev/null || echo '?')" >> "$LOG_FILE"
+echo "" >> "$LOG_FILE"
+# Дублируем вывод в лог
+exec > >(tee -a "$LOG_FILE") 2>&1
+
 # --------------------------------------------------
 header "Проверка системы"
 
@@ -341,8 +352,41 @@ echo ""
 
 if [ "$ERRORS" -gt 0 ]; then
   warn "Завершилось с $ERRORS ошибками"
-  echo "  Проверь вывод выше и установи проблемные компоненты вручную."
   echo ""
+  echo "  Хочешь помочь улучшить установщик?"
+  echo "  Отправить лог ошибки на GitHub?"
+  echo ""
+  echo "  Нажми Enter — создать Issue с логом автоматически"
+  echo "  Или напиши 'нет' и нажми Enter"
+  echo ""
+  read -r SEND_LOG
+  if [ -z "$SEND_LOG" ] || [ "$SEND_LOG" = "да" ] || [ "$SEND_LOG" = "y" ]; then
+    echo ""
+    echo "  Собираю информацию об устройстве..."
+    PHONE=$(getprop ro.product.model 2>/dev/null || echo "неизвестно")
+    ANDROID=$(getprop ro.build.version.release 2>/dev/null || echo "неизвестно")
+    echo ""
+    if command -v gh &>/dev/null && gh auth status 2>/dev/null; then
+      echo "  Создаю Issue на GitHub..."
+      gh issue create \
+        --repo antoshik86/termux-opencode-setup \
+        --title "Ошибка установки: $PHONE (Android $ANDROID)" \
+        --label install-error \
+        --body "**Телефон:** $PHONE
+**Android:** $ANDROID
+**Ошибок:** $ERRORS
+
+**Лог установки:**
+\`\`\`
+$(cat "$LOG_FILE" 2>/dev/null || echo "лог не сохранён")
+\`\`\`
+" 2>&1 | head -3 || warn "Не удалось создать Issue (нет интернета?)"
+    else
+      echo "  GitHub CLI не настроен. Открой в браузере:"
+      echo "  https://github.com/antoshik86/termux-opencode-setup/issues/new?template=install-error.yml"
+    fi
+    echo ""
+  fi
 fi
 
 echo "  Теперь просто напиши: opencode"

@@ -1,0 +1,46 @@
+name: Ошибка установки
+description: Сообщить о проблеме при установке opencode в Termux
+labels: [install-error]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо, что помогаешь сделать сборку лучше!
+        Просто вставь весь вывод из Termux — я сам разберусь.
+
+  - type: input
+    id: phone
+    attributes:
+      label: Телефон
+      description: Какая модель? (например, Xiaomi 14, Samsung S24)
+      placeholder: "Xiaomi 14"
+    validations:
+      required: true
+
+  - type: input
+    id: android
+    attributes:
+      label: Версия Android
+      description: Напиши: 12, 13, 14, 15...
+      placeholder: "14"
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Вывод из Termux
+      description: Вставь ВЕСЬ текст, который выдал setup.sh (нажми и держи → Copy)
+      placeholder: "Начинай вставлять сюда весь вывод setup.sh..."
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Что делала перед ошибкой
+      description: Коротко опиши что делала (например: "скачала Termux, запустила setup.sh")
+      placeholder: "Скачала Termux из F-Droid, вставила 4 команды, запустила setup.sh"
+    validations:
+      required: false
