@@ -353,40 +353,17 @@ echo ""
 if [ "$ERRORS" -gt 0 ]; then
   warn "Завершилось с $ERRORS ошибками"
   echo ""
-  echo "  Хочешь помочь улучшить установщик?"
-  echo "  Отправить лог ошибки на GitHub?"
+  echo "  ========== ЛОГ ОШИБКИ =========="
+  echo "  Устройство: $(getprop ro.product.model 2>/dev/null || echo '?')"
+  echo "  Android: $(getprop ro.build.version.release 2>/dev/null || echo '?')"
   echo ""
-  echo "  Нажми Enter — создать Issue с логом автоматически"
-  echo "  Или напиши 'нет' и нажми Enter"
+  echo "  Скопируй весь текст выше и отправь разработчику"
+  echo "  (Telegram, WhatsApp, — как удобно)"
   echo ""
-  read -r SEND_LOG
-  if [ -z "$SEND_LOG" ] || [ "$SEND_LOG" = "да" ] || [ "$SEND_LOG" = "y" ]; then
-    echo ""
-    echo "  Собираю информацию об устройстве..."
-    PHONE=$(getprop ro.product.model 2>/dev/null || echo "неизвестно")
-    ANDROID=$(getprop ro.build.version.release 2>/dev/null || echo "неизвестно")
-    echo ""
-    if command -v gh &>/dev/null && gh auth status 2>/dev/null; then
-      echo "  Создаю Issue на GitHub..."
-      gh issue create \
-        --repo antoshik86/termux-opencode-setup \
-        --title "Ошибка установки: $PHONE (Android $ANDROID)" \
-        --label install-error \
-        --body "**Телефон:** $PHONE
-**Android:** $ANDROID
-**Ошибок:** $ERRORS
-
-**Лог установки:**
-\`\`\`
-$(cat "$LOG_FILE" 2>/dev/null || echo "лог не сохранён")
-\`\`\`
-" 2>&1 | head -3 || warn "Не удалось создать Issue (нет интернета?)"
-    else
-      echo "  GitHub CLI не настроен. Открой в браузере:"
-      echo "  https://github.com/antoshik86/termux-opencode-setup/issues/new?template=install-error.yml"
-    fi
-    echo ""
-  fi
+  echo "  Лог сохранён в файле:"
+  echo "    cat ~/opencode-install.log"
+  echo "  ================================="
+  echo ""
 fi
 
 echo "  Теперь просто напиши: opencode"
