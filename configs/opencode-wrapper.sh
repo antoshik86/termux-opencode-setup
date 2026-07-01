@@ -8,7 +8,13 @@ set -euo pipefail
 # ============================================================
 
 # Где лежит бинарник opencode
-OPENCODE_BIN="${OPENCODE_BIN:-$HOME/.opencode/bin/opencode}"
+# Сначала ищем opencode-bin (так переименовывает скрипт установки)
+# Если нет — ищем opencode (прямой бинарник из npm)
+if [ -x "$HOME/.opencode/bin/opencode-bin" ]; then
+  OPENCODE_BIN="${OPENCODE_BIN:-$HOME/.opencode/bin/opencode-bin}"
+else
+  OPENCODE_BIN="${OPENCODE_BIN:-$HOME/.opencode/bin/opencode}"
+fi
 
 # Путь к glibc в Termux
 GLIBC_LIBDIR="/data/data/com.termux/files/usr/glibc/lib"

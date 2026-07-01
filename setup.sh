@@ -133,23 +133,30 @@ header "4. Установка opencode"
 
 install_opencode_wrapper() {
   local wrapper_src="$SCRIPT_DIR/configs/opencode-wrapper.sh"
-  local wrapper_dst="$HOME/.opencode/bin/opencode"
-  mkdir -p "$HOME/.opencode/bin"
-  cp "$wrapper_src" "$wrapper_dst"
-  chmod +x "$wrapper_dst"
+  local bin_dir="$HOME/.opencode/bin"
+  mkdir -p "$bin_dir"
+  # Переименовываем бинарник → opencode-bin (чтоб не конфликтовал с обёрткой)
+  if [ -x "$bin_dir/opencode" ] && [ ! -f "$bin_dir/opencode-bin" ]; then
+    if file "$bin_dir/opencode" 2>/dev/null | grep -q "ELF"; then
+      mv "$bin_dir/opencode" "$bin_dir/opencode-bin"
+    fi
+  fi
+  # Ставим обёртку как opencode
+  cp "$wrapper_src" "$bin_dir/opencode"
+  chmod +x "$bin_dir/opencode"
   # Добавляем ~/.opencode/bin в PATH, если ещё нет
   if ! grep -q '\.opencode/bin' "$HOME/.bashrc" 2>/dev/null; then
     echo 'export PATH="$HOME/.opencode/bin:$PATH"' >> "$HOME/.bashrc"
   fi
-  # Если старый бинарник лежит в PATH — удаляем, чтоб не мешал
+  # Если старый бинарник лежит в другом месте PATH — удаляем
   local old_bin
   old_bin=$(command -v opencode 2>/dev/null || true)
-  if [ -n "$old_bin" ] && [ "$old_bin" != "$wrapper_dst" ] && [ -x "$old_bin" ]; then
+  if [ -n "$old_bin" ] && [ "$old_bin" != "$bin_dir/opencode" ] && [ -x "$old_bin" ]; then
     if file "$old_bin" 2>/dev/null | grep -q "ELF"; then
       rm -f "$old_bin" 2>/dev/null || true
     fi
   fi
-  ok "Обёртка glibc установлена как ~/.opencode/bin/opencode"
+  ok "Обёртка glibc установлена (бинарник → opencode-bin, обёртка → opencode)"
 }
 
 # Пробуем скачать бинарник (быстрее чем npm install)
