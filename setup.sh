@@ -50,6 +50,12 @@ warn() { echo -e "  ${YELLOW}⚠ $1${NC}"; }
 fail() { echo -e "  ${RED}✖ $1${NC}"; }
 info() { echo -e "  ${CYAN}→ $1${NC}"; }
 header() { echo -e "\n${CYAN}=== $1 ===${NC}"; }
+pause() {
+  echo ""
+  echo -e "  ${CYAN}⏎ Нажми Enter для продолжения...${NC}"
+  read -r
+  echo ""
+}
 
 echo -e "${CYAN}"
 echo "╔══════════════════════════════════════╗"
@@ -75,6 +81,7 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 
 # --------------------------------------------------
 header "Проверка системы"
+pause
 
 # Проверка, что мы в Termux
 if [ ! -d /data/data/com.termux ]; then
@@ -116,8 +123,15 @@ if ! ping -c 1 github.com &>/dev/null && ! ping -c 1 8.8.8.8 &>/dev/null; then
 fi
 ok "Интернет работает"
 
+echo ""
+echo "  Всё готово к установке. Начинаем!"
+echo "  Установка займёт 3-5 минут (зависит от интернета)"
+echo ""
+
 # --------------------------------------------------
 header "1. Обновление пакетов Termux"
+info "Обновляю список пакетов и устанавливаю обновления..."
+pause
 
 if pkg update -y 2>&1 | tail -3; then
   ok "Список пакетов обновлён"
@@ -131,9 +145,12 @@ if pkg upgrade -y 2>&1 | tail -3; then
 else
   warn "Не все пакеты обновились, продолжаю..."
 fi
+pause
 
 # --------------------------------------------------
 header "2. Установка базовых инструментов"
+info "Git, curl, Node.js, Python, gh, make, openssh, file..."
+pause
 
 pkg install -y git curl gh nodejs python make openssh file 2>&1 | tail -1
 ok "Git, curl, Node.js, Python, gh, make, openssh, file установлены"
@@ -142,9 +159,12 @@ ok "Git, curl, Node.js, Python, gh, make, openssh, file установлены"
 if command -v gh &>/dev/null; then
   gh auth setup-git 2>/dev/null || true
 fi
+pause
 
 # --------------------------------------------------
 header "3. Установка glibc (нужна для запуска opencode)"
+info "glibc — библиотека, без которой opencode не запустится в Termux..."
+pause
 
 pkg install -y glibc-repo 2>&1 | tail -1
 pkg update 2>&1 | tail -1
@@ -163,9 +183,13 @@ else
   fail "  pkg install -y glibc glibc-runner"
   exit 1
 fi
+pause
 
 # --------------------------------------------------
 header "4. Установка opencode"
+info "Сейчас скачается последняя версия opencode..."
+info "Это ~50 МБ. Если интернет медленный — подожди."
+pause
 
 install_opencode_wrapper() {
   local wrapper_src="$SCRIPT_DIR/configs/opencode-wrapper.sh"
@@ -252,6 +276,7 @@ else
     fi
   fi
 fi
+pause
 
 # Проверка что opencode реально работает
 export PATH="$HOME/.opencode/bin:$PATH"
@@ -267,18 +292,24 @@ else
     ERRORS=$((ERRORS+1))
   fi
 fi
+pause
 
 # --------------------------------------------------
 header "5. Установка PLUR (память для opencode)"
+info "PLUR — opencode будет помнить контекст между сессиями..."
+pause
 
 if npm install -g @plur-ai/mcp 2>&1 | tail -3; then
   ok "PLUR установлен"
 else
   warn "PLUR не установился (не критично, можно доставить позже: npm install -g @plur-ai/mcp)"
 fi
+pause
 
 # --------------------------------------------------
 header "6. Настройка конфигов"
+info "Копирую bashrc, opencode.jsonc, termux.properties..."
+pause
 
 cp "$SCRIPT_DIR/configs/bashrc" ~/.bashrc 2>/dev/null && ok "bashrc скопирован" || warn "bashrc не скопирован"
 mkdir -p ~/.config/opencode
@@ -288,9 +319,12 @@ cp "$SCRIPT_DIR/configs/termux.properties" ~/.termux/termux.properties 2>/dev/nu
 
 # Применяем настройки Termux
 termux-reload-settings 2>/dev/null && ok "Настройки Termux применены (появились кнопки ESC, TAB, CTRL)" || warn "Не удалось применить настройки"
+pause
 
 # --------------------------------------------------
 header "7. Установка скиллов opencode"
+info "Скиллы — это плагины: agent-army, dictionary, skeleton-key и ещё 9..."
+pause
 
 SKILL_OK=0
 SKILL_FAIL=0
@@ -314,9 +348,12 @@ while IFS= read -r skill; do
   fi
 done < "$SCRIPT_DIR/skills.txt"
 ok "Скиллов установлено: $SKILL_OK, ошибок: $SKILL_FAIL"
+pause
 
 # --------------------------------------------------
 header "8. Проверка установки"
+info "Проверяю что всё работает..."
+pause
 
 check() {
   local cmd="$1" label="$2"
