@@ -305,11 +305,22 @@ fi
 echo "  Теперь просто напиши: opencode"
 echo "  Первый вопрос: привет"
 echo ""
+echo "  Запускаю opencode через 3 секунды..."
+echo "  (нажми Ctrl+C чтобы отменить)"
+sleep 3
+
+if command -v opencode &>/dev/null; then
+  echo ""
+  opencode
+elif [ -x "$HOME/.opencode/bin/opencode" ]; then
+  echo ""
+  export PATH="$HOME/.opencode/bin:$PATH"
+  opencode
+fi
+
+echo ""
 echo "  Если opencode не запускается:"
 echo "    - Закрой Termux и открой заново"
 echo "    - Выполни: source ~/.bashrc"
 echo "    - Выполни: $HOME/.opencode/bin/opencode --version"
-echo ""
-echo "  Если что-то пошло не так — напиши мне в GitHub Issues:"
-echo "  https://github.com/antoshik86/termux-opencode-setup/issues"
 echo ""
