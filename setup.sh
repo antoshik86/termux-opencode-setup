@@ -99,8 +99,8 @@ fi
 # --------------------------------------------------
 header "2. Установка базовых инструментов"
 
-pkg install -y git curl gh nodejs python make openssh 2>&1 | tail -1
-ok "Git, curl, Node.js, Python, gh, make, openssh установлены"
+pkg install -y git curl gh nodejs python make openssh file 2>&1 | tail -1
+ok "Git, curl, Node.js, Python, gh, make, openssh, file установлены"
 
 # --------------------------------------------------
 header "3. Установка glibc (нужна для запуска opencode)"
@@ -128,75 +128,95 @@ header "4. Установка opencode"
 
 install_opencode_wrapper() {
   local wrapper_src="$SCRIPT_DIR/configs/opencode-wrapper.sh"
-  local wrapper_dst="$HOME/.opencode/bin/opencode-wrapper"
+  local wrapper_dst="$HOME/.opencode/bin/opencode"
   mkdir -p "$HOME/.opencode/bin"
   cp "$wrapper_src" "$wrapper_dst"
   chmod +x "$wrapper_dst"
-  if ! grep -q "opencode-wrapper" "$HOME/.bashrc" 2>/dev/null; then
-    echo 'alias opencode="$HOME/.opencode/bin/opencode-wrapper"' >> "$HOME/.bashrc"
+  # Добавляем ~/.opencode/bin в PATH, если ещё нет
+  if ! grep -q '\.opencode/bin' "$HOME/.bashrc" 2>/dev/null; then
+    echo 'export PATH="$HOME/.opencode/bin:$PATH"' >> "$HOME/.bashrc"
   fi
-  ok "Обёртка glibc установлена"
+  # Если старый бинарник лежит в PATH — удаляем, чтоб не мешал
+  local old_bin
+  old_bin=$(command -v opencode 2>/dev/null || true)
+  if [ -n "$old_bin" ] && [ "$old_bin" != "$wrapper_dst" ] && [ -x "$old_bin" ]; then
+    if file "$old_bin" 2>/dev/null | grep -q "ELF"; then
+      rm -f "$old_bin" 2>/dev/null || true
+    fi
+  fi
+  ok "Обёртка glibc установлена как ~/.opencode/bin/opencode"
 }
 
 # Пробуем скачать бинарник (быстрее чем npm install)
 info "Скачиваю последнюю версию opencode..."
 mkdir -p ~/.opencode/bin
+
+TEMP_DIR="${TMPDIR:-/data/data/com.termux/files/usr/tmp}"
+TEMP_FILE="$TEMP_DIR/opencode.tar.gz"
 BIN_URL="https://github.com/anomalyco/opencode/releases/latest/download/opencode-linux-arm64.tar.gz"
 
+BINARY_OK=false
+
 if curl -L --connect-timeout 10 --speed-time 30 --speed-limit 10000 \
-  -o /tmp/opencode.tar.gz "$BIN_URL" 2>&1; then
-  tar xzf /tmp/opencode.tar.gz -C ~/.opencode/bin/ opencode 2>/dev/null && \
-  chmod +x ~/.opencode/bin/opencode && \
-  rm -f /tmp/opencode.tar.gz
+  -o "$TEMP_FILE" "$BIN_URL" 2>&1; then
+  tar xzf "$TEMP_FILE" -C ~/.opencode/bin/ opencode 2>/dev/null && \
+  chmod +x ~/.opencode/bin/opencode
+  rm -f "$TEMP_FILE"
 
   if [ -x ~/.opencode/bin/opencode ]; then
     ok "Бинарник opencode скачан"
-
-    # Пробуем запустить через glibc-загрузчик
-    if "$GLIBC_LOADER" --library-path "$GLIBC_LIBDIR" \
-      ~/.opencode/bin/opencode --version &>/dev/null; then
-      ok "opencode работает через glibc"
-    else
-      warn "Бинарник скачан, но напрямую не запускается"
-      install_opencode_wrapper
-    fi
-
-    # Ставим alias, если его нет
-    if ! grep -q "opencode-wrapper" "$HOME/.bashrc" 2>/dev/null; then
-      echo 'alias opencode="$HOME/.opencode/bin/opencode-wrapper"' >> "$HOME/.bashrc"
-    fi
-    source "$HOME/.bashrc" 2>/dev/null || true
+    BINARY_OK=true
   else
-    warn "Не удалось распаковать бинарник, ставлю через npm..."
-    npm install -g opencode-ai 2>&1 | tail -3
+    warn "Не удалось распаковать бинарник"
+  fi
+else
+  warn "Не удалось скачать бинарник"
+  rm -f "$TEMP_FILE"
+fi
+
+if [ "$BINARY_OK" = true ]; then
+  # Пробуем запустить через glibc-загрузчик
+  if "$GLIBC_LOADER" --library-path "$GLIBC_LIBDIR" \
+    ~/.opencode/bin/opencode --version &>/dev/null; then
+    ok "opencode работает через glibc"
+  else
+    warn "Бинарнику нужна glibc-обёртка"
+    install_opencode_wrapper
+  fi
+else
+  info "Бинарник не подошёл — пробую установить через npm..."
+  if npm install -g opencode-ai 2>&1 | tail -5; then
+    ok "opencode установлен через npm"
+  else
+    # Иногда npm ругается на cpu — игнорируем и пробуем запустить что поставилось
     if command -v opencode &>/dev/null; then
       ok "opencode установлен через npm"
     else
-      fail "opencode не установился! Попробуй: npm install -g opencode-ai"
+      warn "npm не смог установить opencode-ai"
+      warn ""
+      warn "Попробуй вручную установить последнюю версию:"
+      warn "  curl -L https://github.com/anomalyco/opencode/releases/latest/download/opencode-linux-arm64.tar.gz"
+      warn "    | tar xz -C ~/.opencode/bin/ opencode"
+      warn "  chmod +x ~/.opencode/bin/opencode"
+      warn "  source ~/.bashrc"
+      info "  и перезапусти скрипт: bash setup.sh"
       ERRORS=$((ERRORS+1))
     fi
-  fi
-else
-  warn "Не удалось скачать бинарник, ставлю через npm..."
-  rm -f /tmp/opencode.tar.gz
-  npm install -g opencode-ai 2>&1 | tail -3
-  if command -v opencode &>/dev/null; then
-    ok "opencode установлен через npm"
-  else
-    fail "opencode не установился! Попробуй: npm install -g opencode-ai"
-    ERRORS=$((ERRORS+1))
   fi
 fi
 
 # Проверка что opencode реально работает
+export PATH="$HOME/.opencode/bin:$PATH"
 if command -v opencode &>/dev/null; then
   ver=$(opencode --version 2>/dev/null || echo "?")
   ok "opencode готов: $ver"
 else
-  warn "Пробую через alias..."
-  if grep -q "opencode-wrapper" "$HOME/.bashrc" 2>/dev/null; then
-    ver=$("$HOME/.opencode/bin/opencode-wrapper" --version 2>/dev/null || echo "?")
-    ok "opencode-wrapper готов: $ver"
+  if [ -x "$HOME/.opencode/bin/opencode" ]; then
+    ver=$("$HOME/.opencode/bin/opencode" --version 2>/dev/null || echo "?")
+    ok "opencode готов: $ver"
+  else
+    warn "opencode не найден в PATH. После установки перезапусти Termux."
+    ERRORS=$((ERRORS+1))
   fi
 fi
 
@@ -254,15 +274,13 @@ check() {
     local ver
     ver=$("$cmd" --version 2>&1 | head -1)
     ok "$label: $ver"
+  elif [ -x "$HOME/.opencode/bin/opencode" ]; then
+    local ver
+    ver=$("$HOME/.opencode/bin/opencode" --version 2>&1 | head -1)
+    ok "$label: $ver"
   else
-    if [ "$cmd" = "opencode" ] && [ -x "$HOME/.opencode/bin/opencode-wrapper" ]; then
-      local ver
-      ver=$("$HOME/.opencode/bin/opencode-wrapper" --version 2>&1 | head -1)
-      ok "$label: $ver (через обёртку)"
-    else
-      warn "$label: НЕ НАЙДЕН"
-      ERRORS=$((ERRORS+1))
-    fi
+    warn "$label: НЕ НАЙДЕН"
+    ERRORS=$((ERRORS+1))
   fi
 }
 
@@ -290,7 +308,7 @@ echo ""
 echo "  Если opencode не запускается:"
 echo "    - Закрой Termux и открой заново"
 echo "    - Выполни: source ~/.bashrc"
-echo "    - Выполни: $HOME/.opencode/bin/opencode-wrapper --version"
+echo "    - Выполни: $HOME/.opencode/bin/opencode --version"
 echo ""
 echo "  Если что-то пошло не так — напиши мне в GitHub Issues:"
 echo "  https://github.com/antoshik86/termux-opencode-setup/issues"
