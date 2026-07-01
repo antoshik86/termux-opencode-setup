@@ -254,6 +254,41 @@ opencode
 
 ---
 
+## Обновление opencode
+
+Когда выходит новая версия — обновляйся.
+
+### Если ставил через npm (Способ 1 или 3)
+
+```bash
+npm update -g opencode-ai
+opencode --version
+```
+
+### Если ставил бинарник (Способ 2)
+
+```bash
+# Скачать новую версию поверх старой
+curl -L https://github.com/anomalyco/opencode/releases/latest/download/opencode-linux-arm64.tar.gz \
+  | tar xz -C ~/.opencode/bin/ opencode
+chmod +x ~/.opencode/bin/opencode
+
+# Обёртку обновлять не надо — она просто запускает бинарник
+opencode --version
+```
+
+### Обновление всей сборки
+
+```bash
+cd ~/termux-opencode-setup
+git pull
+bash setup.sh
+```
+
+setup.sh сам заметит, что opencode уже есть, и обновит только конфиги/скиллы.
+
+---
+
 ## Если что-то пошло не так
 
 | Проблема | Решение |
