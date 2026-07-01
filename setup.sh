@@ -1,6 +1,8 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
+SCRIPT_VERSION="2.0"
+
 # Не спрашивать логин/пароль от GitHub
 export GIT_ASKPASS=echo
 
@@ -13,6 +15,29 @@ if [ ! -d "$SCRIPT_DIR/configs" ]; then
   echo "Ошибка: не найдена папка configs/ в репозитории"
   exit 1
 fi
+
+# Автообновление — git pull если это git-репозиторий
+if [ -d "$SCRIPT_DIR/.git" ]; then
+  cd "$SCRIPT_DIR"
+  git remote update 2>/dev/null || true
+  behind=$(git rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
+  if [ "$behind" -gt 0 ]; then
+    echo "→ Доступно обновление скрипта. Обновляю..."
+    git pull --ff-only 2>&1 | tail -1
+    echo "→ Перезапусти скрипт заново: bash setup.sh"
+    exit 0
+  fi
+  cd - >/dev/null
+fi
+
+# Проверка что все нужные файлы на месте
+for f in configs/bashrc configs/opencode.jsonc configs/opencode-wrapper.sh configs/termux.properties skills.txt; do
+  if [ ! -f "$SCRIPT_DIR/$f" ]; then
+    echo "Ошибка: не найден файл $f в репозитории"
+    echo "Скачай свежую версию: git pull"
+    exit 1
+  fi
+done
 
 RED='\033[1;31m'
 GREEN='\033[1;32m'
@@ -28,7 +53,7 @@ header() { echo -e "\n${CYAN}=== $1 ===${NC}"; }
 
 echo -e "${CYAN}"
 echo "╔══════════════════════════════════════╗"
-echo "║     Termux opencode Setup           ║"
+echo "║     Termux opencode Setup v$SCRIPT_VERSION      ║"
 echo "║     https://github.com/antoshik86   ║"
 echo "║     termux-opencode-setup           ║"
 echo "╚══════════════════════════════════════╝"
@@ -292,6 +317,10 @@ check() {
     local ver
     ver=$("$HOME/.opencode/bin/opencode" --version 2>&1 | head -1)
     ok "$label: $ver"
+  elif [ -x "$HOME/.opencode/bin/opencode-bin" ]; then
+    local ver
+    ver=$("$HOME/.opencode/bin/opencode-bin" --version 2>&1 | head -1)
+    ok "$label: $ver (бинарник, без обёртки)"
   else
     warn "$label: НЕ НАЙДЕН"
     ERRORS=$((ERRORS+1))
@@ -323,13 +352,17 @@ echo "  Запускаю opencode через 3 секунды..."
 echo "  (нажми Ctrl+C чтобы отменить)"
 sleep 3
 
+export PATH="$HOME/.opencode/bin:$PATH"
 if command -v opencode &>/dev/null; then
   echo ""
   opencode
-elif [ -x "$HOME/.opencode/bin/opencode" ]; then
+elif [ -x "$HOME/.opencode/bin/opencode-bin" ]; then
   echo ""
-  export PATH="$HOME/.opencode/bin:$PATH"
-  opencode
+  echo "  (запускаю бинарник напрямую, без обёртки)"
+  "$HOME/.opencode/bin/opencode-bin"
+else
+  warn "Не удалось запустить opencode автоматически"
+  warn "Закрой Termux и открой заново, потом напиши: opencode"
 fi
 
 echo ""
