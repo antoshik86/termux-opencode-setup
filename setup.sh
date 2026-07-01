@@ -187,8 +187,10 @@ install_opencode_wrapper() {
   # Ставим обёртку как opencode
   cp "$wrapper_src" "$bin_dir/opencode"
   chmod +x "$bin_dir/opencode"
+  # Удаляем старый алиас opencode-wrapper (если остался от предыдущих версий)
+  sed -i '/opencode-wrapper/d' "$HOME/.bashrc" 2>/dev/null || true
   # Добавляем ~/.opencode/bin в PATH, если ещё нет
-  if ! grep -q '\.opencode/bin' "$HOME/.bashrc" 2>/dev/null; then
+  if ! grep -q '\.opencode/bin.*PATH' "$HOME/.bashrc" 2>/dev/null; then
     echo 'export PATH="$HOME/.opencode/bin:$PATH"' >> "$HOME/.bashrc"
   fi
   # Если старый бинарник лежит в другом месте PATH — удаляем
@@ -230,6 +232,12 @@ else
 fi
 
 if [ "$BINARY_OK" = true ]; then
+  # Чистим старый алиас opencode-wrapper
+  sed -i '/opencode-wrapper/d' "$HOME/.bashrc" 2>/dev/null || true
+  # Добавляем ~/.opencode/bin в PATH
+  if ! grep -q '\.opencode/bin.*PATH' "$HOME/.bashrc" 2>/dev/null; then
+    echo 'export PATH="$HOME/.opencode/bin:$PATH"' >> "$HOME/.bashrc"
+  fi
   # Пробуем запустить через glibc-загрузчик
   if "$GLIBC_LOADER" --library-path "$GLIBC_LIBDIR" \
     ~/.opencode/bin/opencode --version &>/dev/null; then
@@ -240,6 +248,8 @@ if [ "$BINARY_OK" = true ]; then
   fi
 else
   info "Бинарник не подошёл — пробую установить через npm..."
+  # Чистим старый алиас
+  sed -i '/opencode-wrapper/d' "$HOME/.bashrc" 2>/dev/null || true
   if npm install -g opencode-ai 2>&1 | tail -5; then
     ok "opencode установлен через npm"
   else
