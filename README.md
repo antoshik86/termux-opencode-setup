@@ -57,24 +57,28 @@ termux-setup-storage
 
 ## Способ 1: Быстрая установка (автомат)
 
-Всё сделается само. Просто скопируй и вставь команды по одной:
+**Для Тамилы и всех, кто не хочет разбираться.**
+Просто скопируй эти 4 команды по одной и вставь в Termux (нажми и держи → Paste):
 
 ```bash
-# Шаг 1 — ставим Git
 pkg update && pkg upgrade -y
 pkg install -y git
-
-# Шаг 2 — скачиваем сборку
 git clone https://github.com/antoshik86/termux-opencode-setup
-
-# Шаг 3 — заходим в папку
-cd termux-opencode-setup
-
-# Шаг 4 — запускаем установщик
-bash setup.sh
+cd termux-opencode-setup && bash setup.sh
 ```
 
-**Что произойдёт:** скрипт сам обновит пакеты, установит opencode, Node.js, Python, glibc, PLUR, скопирует конфиги и установит 12 скиллов. Ничего нажимать не надо — всё само.
+**Что произойдёт:** скрипт сам:
+- Проверит место на телефоне (нужно ≥500 МБ)
+- Проверит интернет
+- Обновит пакеты
+- Установит Node.js, Python, Git, GitHub CLI
+- Установит glibc (чтобы opencode работал в Termux)
+- Скачает последнюю версию opencode
+- Настроит PLUR (память между сессиями)
+- Скопирует конфиги (появятся кнопки ESC/TAB/CTRL)
+- Установит 12 скиллов-плагинов
+
+> ❗ Если спросит про доступ к файлам — нажми **Allow** (Разрешить) на экране телефона.
 
 ---
 
@@ -205,10 +209,13 @@ termux-reload-settings
 
 ### Шаг 7. Установить скиллы opencode
 
+> ⚠️ Если git запрашивает логин/пароль — просто нажми Enter, он пропустит неудачные и продолжит.
+
 ```bash
+export GIT_ASKPASS=echo
 cat skills.txt | while read skill; do
-  git clone "https://github.com/opencode-ai/skill-${skill}" \
-    ~/.config/opencode/skills/${skill}
+  git clone --depth 1 "https://github.com/opencode-ai/skill-${skill}" \
+    ~/.config/opencode/skills/${skill} 2>/dev/null || echo "  $skill пропущен"
 done
 ```
 
