@@ -4,7 +4,15 @@ set -euo pipefail
 # Не спрашивать логин/пароль от GitHub
 export GIT_ASKPASS=echo
 
+# Найти папку с configs/
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+while [ ! -d "$SCRIPT_DIR/configs" ] && [ "$SCRIPT_DIR" != "/" ]; do
+  SCRIPT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+done
+if [ ! -d "$SCRIPT_DIR/configs" ]; then
+  echo "Ошибка: не найдена папка configs/ в репозитории"
+  exit 1
+fi
 
 RED='\033[1;31m'
 GREEN='\033[1;32m'
@@ -55,7 +63,8 @@ fi
 ok "Доступ к файлам есть"
 
 # Проверка места
-available_mb=$(df -m /data/data/com.termux/files/home | tail -1 | awk '{print $4}')
+available_kb=$(df -k /data/data/com.termux/files/home | tail -1 | awk '{print $4}')
+available_mb=$((available_kb / 1024))
 if [ "$available_mb" -lt "$MIN_SPACE_MB" ]; then
   fail "Мало места на телефоне!"
   fail "Доступно: ${available_mb} MB, нужно минимум ${MIN_SPACE_MB} MB"
