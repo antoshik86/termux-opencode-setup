@@ -204,31 +204,57 @@ install_opencode_wrapper() {
   ok "Обёртка glibc установлена (бинарник → opencode-bin, обёртка → opencode)"
 }
 
-# Пробуем скачать бинарник (быстрее чем npm install)
-info "Скачиваю последнюю версию opencode..."
 mkdir -p ~/.opencode/bin
-
 TEMP_DIR="${TMPDIR:-/data/data/com.termux/files/usr/tmp}"
 TEMP_FILE="$TEMP_DIR/opencode.tar.gz"
 BIN_URL="https://github.com/anomalyco/opencode/releases/latest/download/opencode-linux-arm64.tar.gz"
-
 BINARY_OK=false
 
-if curl -L --connect-timeout 10 --speed-time 30 --speed-limit 10000 \
-  -o "$TEMP_FILE" "$BIN_URL" 2>&1; then
-  tar xzf "$TEMP_FILE" -C ~/.opencode/bin/ opencode 2>/dev/null && \
-  chmod +x ~/.opencode/bin/opencode
-  rm -f "$TEMP_FILE"
-
-  if [ -x ~/.opencode/bin/opencode ]; then
-    ok "Бинарник opencode скачан"
-    BINARY_OK=true
-  else
-    warn "Не удалось распаковать бинарник"
+# Проверяем, есть ли уже бинарник
+EXISTING_BIN=""
+for try in ~/.opencode/bin/opencode ~/.opencode/bin/opencode-bin; do
+  if [ -x "$try" ]; then
+    EXISTING_BIN="$try"
+    break
   fi
-else
-  warn "Не удалось скачать бинарник"
-  rm -f "$TEMP_FILE"
+done
+
+if [ -n "$EXISTING_BIN" ]; then
+  # Узнаём версию установленного бинарника
+  EXISTING_VER=$("$GLIBC_LOADER" --library-path "$GLIBC_LIBDIR" \
+    "$EXISTING_BIN" --version 2>/dev/null | head -1 || echo "?")
+  echo ""
+  echo "  Уже установлен: $EXISTING_VER ($EXISTING_BIN)"
+  echo "  Загрузить новую версию? (y/N, 10 сек)"
+  read -r -t 10 REINSTALL || true
+  echo ""
+  if [ "$REINSTALL" != "y" ] && [ "$REINSTALL" != "Y" ] && [ "$REINSTALL" != "yes" ]; then
+    info "Использую текущий бинарник"
+    BINARY_OK=true
+    # Если файл называется opencode-bin — уже готов, иначе проверим
+    if echo "$EXISTING_BIN" | grep -q "opencode-bin"; then
+      rm -f ~/.opencode/bin/opencode 2>/dev/null || true
+    fi
+  fi
+fi
+
+if [ "$BINARY_OK" = false ]; then
+  info "Скачиваю opencode (~50 МБ)..."
+  if curl -L --connect-timeout 10 --speed-time 30 --speed-limit 10000 \
+    -o "$TEMP_FILE" "$BIN_URL" 2>&1; then
+    tar xzf "$TEMP_FILE" -C ~/.opencode/bin/ opencode 2>/dev/null && \
+    chmod +x ~/.opencode/bin/opencode
+    rm -f "$TEMP_FILE"
+    if [ -x ~/.opencode/bin/opencode ]; then
+      ok "Бинарник opencode скачан"
+      BINARY_OK=true
+    else
+      warn "Не удалось распаковать бинарник"
+    fi
+  else
+    warn "Не удалось скачать бинарник"
+    rm -f "$TEMP_FILE"
+  fi
 fi
 
 if [ "$BINARY_OK" = true ]; then
