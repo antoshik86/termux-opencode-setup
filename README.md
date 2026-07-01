@@ -6,6 +6,8 @@
 
 Эта инструкция проведёт тебя шаг за шагом от установки Termux до готовой рабочей среды с ИИ-ассистентом.
 
+⚠️ **Важно:** Termux использует библиотеку Bionic (как в Android), а opencode собран под glibc (как в обычном Linux). Поэтому opencode нужно запускать через специальную прослойку — glibc-загрузчик. В этой сборке всё настроено автоматически.
+
 ---
 
 ## Что входит в сборку
@@ -78,23 +80,40 @@ bash setup.sh
 
 ## Способ 2: Установка с релиза (без npm, быстрее)
 
-Если не хочешь ждать `npm install` — opencode ставится сразу из готового бинарника:
+Если не хочешь ждать `npm install` — opencode ставится сразу из готового бинарника.
+
+**ВАЖНО:** Бинарник из GitHub releases собран под обычный Linux (glibc).
+Termux использует другую libc (Bionic).
+Поэтому бинарник нужно запускать через glibc-загрузчик.
+Скрипт `opencode-wrapper.sh` делает это автоматически + сбрасывает `LD_PRELOAD`.
 
 ```bash
+# Шаг 1 — обновление + базовые пакеты
 pkg update && pkg upgrade -y
 pkg install -y git curl glibc-repo glibc glibc-runner
+
+# Шаг 2 — скачать сборку
 git clone https://github.com/antoshik86/termux-opencode-setup
 cd termux-opencode-setup
 
-# Скачать и распаковать opencode
+# Шаг 3 — скачать последний релиз opencode
+# Нужна glibc-версия (не musl!)
 mkdir -p ~/.opencode/bin
-curl -L https://github.com/antoshik86/termux-opencode-setup/releases/latest/download/opencode-v1.17.11-linux-arm64-glibc.tar.gz \
-  | tar xz --strip-components=2 -C ~/.opencode/bin package/bin/
+curl -L https://github.com/anomalyco/opencode/releases/latest/download/opencode-linux-arm64.tar.gz \
+  | tar xz -C ~/.opencode/bin/ opencode
 chmod +x ~/.opencode/bin/opencode
-echo 'export PATH="$HOME/.opencode/bin:$PATH"' >> ~/.bashrc
+
+# Шаг 4 — установить скрипт-обёртку вместо прямой ссылки
+# Обёртка сама найдёт glibc-загрузчик и запустит через него
+cp configs/opencode-wrapper.sh ~/.opencode/bin/opencode-wrapper
+chmod +x ~/.opencode/bin/opencode-wrapper
+
+# Шаг 5 — добавить в PATH команду opencode
+echo 'alias opencode="$HOME/.opencode/bin/opencode-wrapper"' >> ~/.bashrc
 source ~/.bashrc
 
-# setup.sh сам заметит, что opencode уже есть, и не будет ставить через npm
+# Шаг 6 — запустить остальной установщик (конфиги, скиллы, PLUR)
+# setup.sh увидит, что opencode уже есть, и не будет ставить через npm
 bash setup.sh
 ```
 
@@ -151,6 +170,10 @@ opencode --version
 Должно показать `1.17.11` или похожий номер.
 
 > ❌ Если пишет "command not found" — закрой Termux и открой заново. Если не помогло, выполни: `export PATH="$HOME/.opencode/bin:$PATH"`
+>
+> ❌ Если пишет "cannot execute: required file not found" — бинарник не может найти glibc.
+> **Решение:** запускай через `opencode-wrapper.sh` (см. Способ 2).
+> Или установи через npm: `npm install -g opencode-ai`.
 
 ### Шаг 5. Установить PLUR (память для opencode)
 
@@ -238,6 +261,7 @@ opencode
 | `pkg: command not found` | Ты не в Termux, а в обычном терминале Android. Открой приложение Termux. |
 | `opencode: command not found` | Закрой и открой Termux заново. Или выполни: `export PATH="$HOME/.opencode/bin:\$PATH"` |
 | `Cannot read properties of null` | Не установлен glibc. Вернись к Шагу 3. |
+| `cannot execute: required file not found` | Бинарник собран под обычный Linux, а Termux использует Bionic. Нужно запускать через glibc-загрузчик. Решение: используй `opencode-wrapper.sh` (см. Способ 2) или ставь через `npm install -g opencode-ai`. |
 | `Permission denied` | Не дал разрешения. Выполни `termux-setup-storage` и нажми Allow. |
 
 ---
@@ -250,9 +274,13 @@ https://github.com/antoshik86/termux-opencode-setup/releases
 В каждом релизе:
 | Файл | Описание |
 |---|---|
-| `opencode-v{version}-linux-arm64-glibc.tar.gz` | opencode для Termux с glibc (ARM64) |
-| `opencode-v{version}-linux-arm64-musl.tar.gz` | opencode для Termux с musl (ARM64) |
+| `opencode-v{version}-linux-arm64.tar.gz` | Бинарник под Linux ARM64 (glibc). **Его нужно скачивать.** |
 | `setup.sh` | Автоустановщик |
+
+> Бинарники opencode (не musl!) можно брать с официальных релизов:
+> `https://github.com/anomalyco/opencode/releases/latest/download/opencode-linux-arm64.tar.gz`
+>
+> musl-версия НЕ подходит для Termux. Нужна именно glibc.
 
 ---
 
@@ -260,11 +288,12 @@ https://github.com/antoshik86/termux-opencode-setup/releases
 
 ```
 termux-opencode-setup/
-├── README.md            # Эта инструкция (ты читаешь её)
-├── setup.sh             # Автоустановщик — запусти и забудь
+├── README.md                 # Эта инструкция (ты читаешь её)
+├── setup.sh                  # Автоустановщик — запусти и забудь
 ├── configs/
-│   ├── bashrc           # Настройки терминала
-│   ├── opencode.jsonc   # Настройки opencode
-│   └── termux.properties # Клавиатура и внешний вид Termux
-└── skills.txt           # Список скиллов для установки
+│   ├── bashrc                # Настройки терминала
+│   ├── opencode.jsonc        # Настройки opencode
+│   ├── opencode-wrapper.sh   # Скрипт для запуска glibc-бинарника в Termux
+│   └── termux.properties     # Клавиатура и внешний вид Termux
+└── skills.txt                # Список скиллов для установки
 ```
